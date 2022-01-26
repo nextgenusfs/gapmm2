@@ -27,7 +27,6 @@ If we then map this transcript against the genome, we get the following PAF alig
 ```
 $ minimap2 -x splice --cs genome.fasta cds-transcripts.fa | grep 'OPO1_006919'
 OPO1_006919-T1	543	13	543	-	scaffold_9	658044	408903	409554	530	530	60	NM:i:0	ms:i:530	AS:i:466	nn:i:0	ts:A:+	tp:A:P	cm:i:167	s1:i:510	s2:i:0	de:f:0	rl:i:0	cs:Z::129~ct57ac:166~ct64ac:235
-
 ```
 
 The `--cs` flag in minimap2 can be used to parse the coordinates (below) and you can see we are missing the 5' exon.
@@ -74,7 +73,6 @@ Optional arguments:
 Help:
   -h, --help        Show this help message and exit
   --version         Show program's version number and exit
-
 ```
 
 
@@ -91,7 +89,6 @@ It can also be run as a python module.  The `splice_aligner` function will retur
 >>> results[0]
 ['OPO1_000001-T1', 2184, 0, 2184, '+', 'scaffold_1', 1803704, 887, 3127, 2184, 2184, 60, 'tp:A:P', 'ts:A:+', 'NM:i:0', 'cs:Z::958~gt56ag:1226']
 >>> 
-
 ```
 
 
