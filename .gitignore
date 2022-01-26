@@ -1,0 +1,4 @@
+.DS_Store
+build/
+gapmm2.egg-info/
+gapmm2/__pycache__/
