@@ -1,5 +1,5 @@
-[![Latest Github release](https://img.shields.io/github/release/nextgenusfs/gfftk.svg)](https://github.com/nextgenusfs/gfftk/releases/latest)
-![Conda](https://img.shields.io/conda/dn/bioconda/gfftk)
+[![Latest Github release](https://img.shields.io/github/release/nextgenusfs/gapmm2.svg)](https://github.com/nextgenusfs/gapmm2/releases/latest)
+![Conda](https://img.shields.io/conda/dn/bioconda/gapmm2)
 
 # gapmm2: gapped alignment using minimap2
 
