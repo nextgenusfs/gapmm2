@@ -36,6 +36,8 @@ def parse_args(args):
 
     optional_args = parser.add_argument_group('Optional arguments')
     optional_args.add_argument('-o', '--out', help='output in PAF format (default: stdout)', metavar='')
+    optional_args.add_argument('-f', '--out-format', dest='out_fmt', default='paf',
+                               choices=['paf', 'gff3'], help='output format [paf,gff3]', metavar='')
     optional_args.add_argument('-t', '--threads', type=int, default=3, help='number of threads to use with minimap2 (default: 3)', metavar='')
     optional_args.add_argument('-m', '--min-mapq', dest='min_mapq', default=1, help='minimum map quality value', metavar='')
     optional_args.add_argument('-i', '--max-intron', dest='max_intron', type=int, default=500, help='max intron length, controls terminal search space', metavar='')

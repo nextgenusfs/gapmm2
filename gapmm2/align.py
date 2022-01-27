@@ -2,6 +2,7 @@
 import sys
 import mappy as mp
 import edlib
+from natsort import natsorted
 from .utils import zopen, check_inputs
 
 
@@ -446,7 +447,112 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
     return results, stats
 
 
-def aligner(reference, query, output=False, threads=3, min_mapq=1, max_intron=500, debug=False):
+def cs2coords(start, qstart, length, strand, cs, offset=1,
+              splice_donor=['gt', 'at'], splice_acceptor=['ag', 'ac']):
+    """
+    # From minimap2 manual this is the cs flag definitions
+    Op	Regex	Description
+    =	[ACGTN]+	Identical sequence (long form)
+    :	[0-9]+	Identical sequence length
+    *	[acgtn][acgtn]	Substitution: ref to query
+    +	[acgtn]+	Insertion to the reference
+    -	[acgtn]+	Deletion from the reference
+    ~	[acgtn]{2}[0-9]+[acgtn]{2}	Intron length and splice signal
+    """
+    cs = cs.replace('cs:Z:', '')
+    ProperSplice = True
+    exons = [int(start)]
+    position = int(start)
+    query = [int(qstart)]
+    querypos = 0
+    num_exons = 1
+    gaps = 0
+    mismatches = 0
+    indels = []
+    if strand == '+':
+        sp_donor = splice_donor
+        sp_acceptor = splice_acceptor
+        sort_orientation = False
+    elif strand == '-':
+        # rev comp and swap donor/acceptor
+        sp_donor = [mp.revcomp(x).lower() for x in splice_acceptor]
+        sp_acceptor = [mp.revcomp(x).lower() for x in splice_donor]
+        sort_orientation = True
+    for s, value in cs2tuples(cs):
+        if s == ':':
+            position += int(value)
+            querypos += int(value)
+            indels.append(0)
+        elif s == '-':
+            gaps += 1
+            position += len(value)
+            querypos += len(value)
+            indels.append(-len(value))
+        elif s == '+':
+            gaps += 1
+            position += len(value)
+            querypos += len(value)
+            indels.append(len(value))
+        elif s == '~':
+            if value.startswith(tuple(sp_donor)) and value.endswith(tuple(sp_acceptor)):
+                ProperSplice = True
+            else:
+                ProperSplice = False
+            num_exons += 1
+            exons.append(position+indels[-1])
+            query.append(querypos)
+            query.append(querypos+1)
+            intronLen = int(value[2:-2])
+            position += intronLen
+            exons.append(position)
+            indels.append(0)
+        elif s == '*':
+            mismatches += len(value)/2
+    # add last Position
+    exons.append(position)
+    query.append(int(length))
+    # convert exon list into list of exon tuples
+    exontmp = list(zip(exons[0::2], exons[1::2]))
+    queryList = list(zip(query[0::2], query[1::2]))
+    exonList = []
+    for x in sorted(exontmp, key=lambda tup: tup[0], reverse=sort_orientation):
+        exonList.append((x[0]+offset, x[1]))
+    return exonList, queryList, mismatches, gaps, ProperSplice
+
+
+def paf2gff3(paf, output=False, minpident=0):
+    if output:
+        outfile = zopen(output, mode='w')
+    else:
+        outfile = sys.stdout
+    outfile.write('##gff-version 3\n')
+    # paf is a list of lists in paf format
+    # paf = [name, len(seq), h.q_st, h.q_en, strand, h.ctg, h.ctg_len, h.r_st, h.r_en, h.mlen, h.blen, h.mapq, tp, ts, nm, cs]
+    count = 1
+    sorted_paf = natsorted(paf, key=lambda x: (x[5], x[7]))
+    for p in sorted_paf:
+        exons, queries, mismatches, gaps, splice = cs2coords(p[7], p[2], p[9], p[4], p[-1])
+        matches = p[9] - mismatches - gaps
+        pident = 100 * (matches / p[9])
+        if pident < minpident:
+            continue
+        for i, exon in enumerate(exons):
+            start = exon[0]
+            end = exon[1]
+            if p[4] == '+':
+                qstart = queries[i][0]
+                qend = queries[i][1]
+            else:
+                qstart = p[1] - queries[i][1] + 1
+                qend = p[1] - queries[i][0] + 1
+            if qstart == 0:
+                qstart = 1
+            outfile.write('{:}\t{:}\t{:}\t{:}\t{:}\t{:.2f}\t{:}\t{:}\tID=gapmm2_{:};Target={:} {:} {:}\n'.format(
+                p[5], 'gapmm2', 'cDNA_match', start, end, pident, p[4], '.', count, p[0], qstart, qend))
+        count += 1
+
+
+def aligner(reference, query, output=False, threads=3, out_fmt='paf', min_mapq=1, max_intron=500, debug=False):
     # wrapper for spliced alignment for script to write to file
     if output:
         outfile = zopen(output, mode='w')
@@ -456,16 +562,15 @@ def aligner(reference, query, output=False, threads=3, min_mapq=1, max_intron=50
     if debug:
         sys.stderr.write("Generated {} alignments: {} required 5' refinement, {} required 3' refinement, {} dropped low score\n".format(
             stats['n'], stats['refine-left'], stats['refine-right'], stats['low-mapq']))
-    for r in results:
-        outfile.write('{}\n'.format('\t'.join([str(x) for x in r])))
+    if out_fmt == 'paf':
+        for r in natsorted(results, key = lambda x: (x[5], x[7])):
+            outfile.write('{}\n'.format('\t'.join([str(x) for x in r])))
+    elif out_fmt == 'gff3':
+        paf2gff3(results, output=output)
 
 
 def align(args):
     check_inputs([args.reference, args.query])
     aligner(args.reference, args.query, output=args.out, threads=args.threads,
-            min_mapq=args.min_mapq, max_intron=args.max_intron, debug=args.debug)
-
-
-
-
-
+            min_mapq=args.min_mapq, max_intron=args.max_intron, out_fmt=args.out_fmt,
+            debug=args.debug)

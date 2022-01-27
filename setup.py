@@ -22,7 +22,7 @@ VERSION = None
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'mappy', 'edlib'
+    'mappy', 'edlib', 'natsort'
 ]
 
 # What packages are optional?
