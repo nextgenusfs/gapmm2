@@ -112,7 +112,7 @@ def left_update_paf_plus(paf, align, slide, offset):
             if new_value < 1:
                 if old_cs_tup[1][0] == '*':
                     if old_value + (len(old_cs_tup[1][1])/2) == slide:
-                        del old_cs_tup[-2]
+                        del old_cs_tup[1]
                 elif old_cs_tup[1][0] == ':':
                     old_value2 = int(old_cs_tup[1][1])
                     new_value2 = old_value2 + new_value
@@ -123,7 +123,7 @@ def left_update_paf_plus(paf, align, slide, offset):
         new_cs_str = ''
         for x in old_cs_tup:
             new_cs_str += '{}{}'.format(x[0], x[1])
-        intron_len = old_st - (lp[1]+1+offset-slide)
+        intron_len = (old_st+slide) - (lp[1]+1+offset)
         assert intron_len > 0, "Introns cannot be less than zero"
         new_cs = 'cs:Z::{}~gt{}ag{}'.format(align['cigar'].strip('='), intron_len, new_cs_str)
         try:
@@ -150,7 +150,7 @@ def left_update_paf_minus(paf, align, slide, offset):
         old_cs_tup = cs2tuples(old_cs)
         if slide > 0:
             old_value = int(old_cs_tup[-1][1])
-            new_value = old_value+slide
+            new_value = old_value-slide
             if new_value < 1:
                 if old_cs_tup[-2][0] == '*':
                     if old_value + (len(old_cs_tup[-2][1])/2) == slide:
@@ -165,7 +165,7 @@ def left_update_paf_minus(paf, align, slide, offset):
         new_cs_str = ''
         for x in old_cs_tup:
             new_cs_str += '{}{}'.format(x[0], x[1])
-        intron_len = (lp[0]+offset) - (old_en+slide)
+        intron_len = (lp[0]+offset) - (old_en-slide)
         assert intron_len > 0, "Introns cannot be less than zero"
         new_cs = 'cs:Z:{}~ct{}ac:{}'.format(new_cs_str, intron_len, align['cigar'].strip('='))
         try:
@@ -207,7 +207,7 @@ def right_update_paf_plus(paf, align, slide, offset):
         new_cs_str = ''
         for x in old_cs_tup:
             new_cs_str += '{}{}'.format(x[0], x[1])
-        intron_len = (lp[0]+offset) - old_en-slide
+        intron_len = (lp[0]+offset) - (old_en-slide)
         assert intron_len > 0, "Introns cannot be less than zero"
         new_cs = 'cs:Z:{}~gt{}ag:{}'.format(old_cs, intron_len, align['cigar'].strip('='))
         try:
@@ -305,7 +305,11 @@ def cs2tuples(cs, separators=[':', '*', '+', '-', '~']):
 
 def left_plus_best_align(paf, refseq, contig, refstart, queryseq, querystart, offset=6, maxlen=500):
     keep =[]
-    ref = refseq.seq(contig, refstart-maxlen, refstart+offset)
+    if refstart-maxlen < 0:
+        r_st = 0
+    else:
+        r_st = refstart-maxlen
+    ref = refseq.seq(contig, r_st, refstart+offset)
     slides = find_all_splice_AG(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = queryseq[0:querystart+slide]
@@ -323,7 +327,11 @@ def left_plus_best_align(paf, refseq, contig, refstart, queryseq, querystart, of
 
 def left_minus_best_align(paf, refseq, contig, refend, queryseq, querystart, offset=6, maxlen=500):
     keep =[]
-    ref = refseq.seq(contig, refend-offset, refend+maxlen)
+    if refend+maxlen > len(refseq.seq(contig)):
+        r_en = len(refseq.seq(contig))
+    else:
+        r_en = refend+maxlen
+    ref = refseq.seq(contig, refend-offset, r_en)
     slides = find_all_splice_CT(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = mp.revcomp(queryseq[0:querystart+slide])
@@ -341,7 +349,11 @@ def left_minus_best_align(paf, refseq, contig, refend, queryseq, querystart, off
 
 def right_plus_best_align(paf, refseq, contig, refend, queryseq, queryend, offset=6, maxlen=500):
     keep =[]
-    ref = refseq.seq(contig, refend-offset, refend+maxlen)
+    if refend+maxlen > len(refseq.seq(contig)):
+        r_en = len(refseq.seq(contig))
+    else:
+        r_en = refend+maxlen
+    ref = refseq.seq(contig, refend-offset, r_en)
     slides = find_all_splice_GT(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = queryseq[queryend-slide:]
@@ -359,7 +371,11 @@ def right_plus_best_align(paf, refseq, contig, refend, queryseq, queryend, offse
 
 def right_minus_best_align(paf, refseq, contig, refstart, queryseq, queryend, offset=6, maxlen=500):
     keep = []
-    ref = refseq.seq(contig, refstart-maxlen, refstart+offset)
+    if refstart-maxlen < 0:
+        r_st = 0
+    else:
+        r_st = refstart-maxlen
+    ref = refseq.seq(contig, r_st, refstart+offset)
     slides = find_all_splice_AC(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = mp.revcomp(queryseq[queryend-slide:])
@@ -375,7 +391,7 @@ def right_minus_best_align(paf, refseq, contig, refstart, queryseq, queryend, of
     return paf
 
 
-def splice_aligner(reference, query, threads=3, min_mapq=1):
+def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
     """
     # splicing plus strand, GT-AG junctions
     ATG GGC | GTX  ------- XAG | GCC TAA
@@ -413,28 +429,30 @@ def splice_aligner(reference, query, threads=3, min_mapq=1):
                    h.ctg_len, h.r_st, h.r_en, h.mlen, h.blen, h.mapq,
                    tp, ts, nm, cs]
             if h.q_st > 0: # refine the alignment for first exon or left side of query
-                stats['refine-left'] += 1
                 if strand == '+':
-                    paf = left_plus_best_align(paf, ref_idx, h.ctg, h.r_st, seq, h.q_st, offset=6, maxlen=500)
+                    paf = left_plus_best_align(paf, ref_idx, h.ctg, h.r_st, seq, h.q_st, offset=6, maxlen=max_intron)
                 else:  # negative/crick strand
-                    paf = left_minus_best_align(paf, ref_idx, h.ctg, h.r_en, seq, h.q_st, offset=6, maxlen=500)
+                    paf = left_minus_best_align(paf, ref_idx, h.ctg, h.r_en, seq, h.q_st, offset=6, maxlen=max_intron)
+                if paf[-1] != cs:
+                    stats['refine-left'] += 1
             if len(seq) > h.q_en:  # refine alignment for last exon or right side of query
-                stats['refine-right'] += 1
                 if strand == '+':
-                    paf = right_plus_best_align(paf, ref_idx, h.ctg, h.r_en, seq, h.q_en, offset=6, maxlen=500)
+                    paf = right_plus_best_align(paf, ref_idx, h.ctg, h.r_en, seq, h.q_en, offset=6, maxlen=max_intron)
                 else:
-                    paf = right_minus_best_align(paf, ref_idx, h.ctg, h.r_st, seq, h.q_en, offset=6, maxlen=500)
+                    paf = right_minus_best_align(paf, ref_idx, h.ctg, h.r_st, seq, h.q_en, offset=6, maxlen=max_intron)
+                if paf[-1] != cs:
+                    stats['refine-right'] += 1
             results.append(paf)
     return results, stats
 
 
-def aligner(reference, query, output=False, threads=3, min_mapq=1, debug=False):
+def aligner(reference, query, output=False, threads=3, min_mapq=1, max_intron=500, debug=False):
     # wrapper for spliced alignment for script to write to file
     if output:
         outfile = zopen(output, mode='w')
     else:
         outfile = sys.stdout
-    results, stats = splice_aligner(reference, query, threads=threads, min_mapq=min_mapq)
+    results, stats = splice_aligner(reference, query, threads=threads, min_mapq=min_mapq, max_intron=max_intron)
     if debug:
         sys.stderr.write("Generated {} alignments: {} required 5' refinement, {} required 3' refinement, {} dropped low score\n".format(
             stats['n'], stats['refine-left'], stats['refine-right'], stats['low-mapq']))
@@ -444,7 +462,8 @@ def aligner(reference, query, output=False, threads=3, min_mapq=1, debug=False):
 
 def align(args):
     check_inputs([args.reference, args.query])
-    aligner(args.reference, args.query, output=args.out, threads=args.threads, min_mapq=args.min_mapq, debug=args.debug)
+    aligner(args.reference, args.query, output=args.out, threads=args.threads,
+            min_mapq=args.min_mapq, max_intron=args.max_intron, debug=args.debug)
 
 
 
