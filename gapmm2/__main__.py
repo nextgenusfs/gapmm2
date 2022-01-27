@@ -28,7 +28,7 @@ def main():
 
 def parse_args(args):
     description = BOLD+'gapmm2: gapped alignment with minimap2.'+END_FORMATTING+\
-        ' Performs minimap2/mappy alignment with splice options and refines terminal alignments with edlib. Output is PAF format.'
+        ' Performs minimap2/mappy alignment with splice options and refines terminal alignments with edlib.'
     parser = MyParser(description=description, formatter_class=MyHelpFormatter, add_help=False)
     required_args = parser.add_argument_group('Positional arguments')
     required_args.add_argument('reference', help='reference genome (FASTA)')
