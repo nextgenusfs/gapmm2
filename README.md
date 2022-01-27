@@ -56,23 +56,25 @@ OPO1_006919-T1	543	0	543	-	scaffold_9	658044	408903	409621	543	543	60	tp:A:P	ts:
 
 ```
 $ gapmm2
-usage: gapmm2 [-o] [-t] [-m] [-d] [-h] [--version] reference query
+usage: gapmm2 [-o] [-f] [-t] [-m] [-i] [-d] [-h] [--version] reference query
 
-gapmm2: gapped alignment with minimap2. Performs minimap2/mappy alignment with splice options and refines terminal alignments with edlib. Output is PAF format.
+gapmm2: gapped alignment with minimap2. Performs minimap2/mappy alignment with splice options and refines terminal alignments with edlib.
 
 Positional arguments:
-  reference         reference genome (FASTA)
-  query             transcipts in FASTA or FASTQ
+  reference           reference genome (FASTA)
+  query               transcipts in FASTA or FASTQ
 
 Optional arguments:
-  -o , --out        output in PAF format (default: stdout)
-  -t , --threads    number of threads to use with minimap2 (default: 3)
-  -m , --min-mapq   minimum map quality value (default: 1)
-  -d, --debug       write some debug info to stderr (default: False)
+  -o , --out          output in PAF format (default: stdout)
+  -f , --out-format   output format [paf,gff3] (default: paf)
+  -t , --threads      number of threads to use with minimap2 (default: 3)
+  -m , --min-mapq     minimum map quality value (default: 1)
+  -i , --max-intron   max intron length, controls terminal search space (default: 500)
+  -d, --debug         write some debug info to stderr (default: False)
 
 Help:
-  -h, --help        Show this help message and exit
-  --version         Show program's version number and exit
+  -h, --help          Show this help message and exit
+  --version           Show program's version number and exit
 ```
 
 
