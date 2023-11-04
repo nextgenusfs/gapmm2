@@ -18,6 +18,7 @@ def is_file(f):
 def which2(program):
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
     fpath, fname = os.path.split(program)
     if fpath:
         if is_exe(program):
@@ -31,18 +32,27 @@ def which2(program):
     return None
 
 
-def open_pipe(command, mode='r', buff=1024*1024):
+def open_pipe(command, mode="r", buff=1024 * 1024):
     import subprocess
     import signal
-    if 'r' in mode:
-        return subprocess.Popen(command, shell=True, bufsize=buff,
-                                stdout=subprocess.PIPE, universal_newlines=True,
-                                preexec_fn=lambda: signal.signal(
-                                    signal.SIGPIPE, signal.SIG_DFL)
-                                ).stdout
-    elif 'w' in mode:
-        return subprocess.Popen(command, shell=True, bufsize=buff, universal_newlines=True,
-                                stdin=subprocess.PIPE).stdin
+
+    if "r" in mode:
+        return subprocess.Popen(
+            command,
+            shell=True,
+            bufsize=buff,
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+            preexec_fn=lambda: signal.signal(signal.SIGPIPE, signal.SIG_DFL),
+        ).stdout
+    elif "w" in mode:
+        return subprocess.Popen(
+            command,
+            shell=True,
+            bufsize=buff,
+            universal_newlines=True,
+            stdin=subprocess.PIPE,
+        ).stdin
     return None
 
 
@@ -54,23 +64,24 @@ WHICH_BZIP2 = which2("bzip2")
 WHICH_PBZIP2 = which2("pbzip2")
 
 
-def open_bz2(filename, mode='r', buff=1024*1024, external=PARALLEL):
+def open_bz2(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
     if external is None or external == NORMAL:
         import bz2
+
         return bz2.BZ2File(filename, mode, buff)
     elif external == PROCESS:
         if not WHICH_BZIP2:
             return open_bz2(filename, mode, buff, NORMAL)
-        if 'r' in mode:
+        if "r" in mode:
             return open_pipe("bzip2 -dc " + filename, mode, buff)
-        elif 'w' in mode:
+        elif "w" in mode:
             return open_pipe("bzip2 >" + filename, mode, buff)
     elif external == PARALLEL:
         if not WHICH_PBZIP2:
             return open_bz2(filename, mode, buff, PROCESS)
-        if 'r' in mode:
+        if "r" in mode:
             return open_pipe("pbzip2 -dc " + filename, mode, buff)
-        elif 'w' in mode:
+        elif "w" in mode:
             return open_pipe("pbzip2 >" + filename, mode, buff)
     return None
 
@@ -79,23 +90,24 @@ WHICH_GZIP = which2("gzip")
 WHICH_PIGZ = which2("pigz")
 
 
-def open_gz(filename, mode='r', buff=1024*1024, external=PARALLEL):
+def open_gz(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
     if external is None or external == NORMAL:
         import gzip
+
         return gzip.GzipFile(filename, mode, buff)
     elif external == PROCESS:
         if not WHICH_GZIP:
             return open_gz(filename, mode, buff, NORMAL)
-        if 'r' in mode:
+        if "r" in mode:
             return open_pipe("gzip -dc " + filename, mode, buff)
-        elif 'w' in mode:
+        elif "w" in mode:
             return open_pipe("gzip >" + filename, mode, buff)
     elif external == PARALLEL:
         if not WHICH_PIGZ:
             return open_gz(filename, mode, buff, PROCESS)
-        if 'r' in mode:
+        if "r" in mode:
             return open_pipe("pigz -dc " + filename, mode, buff)
-        elif 'w' in mode:
+        elif "w" in mode:
             return open_pipe("pigz >" + filename, mode, buff)
     return None
 
@@ -103,16 +115,16 @@ def open_gz(filename, mode='r', buff=1024*1024, external=PARALLEL):
 WHICH_XZ = which2("xz")
 
 
-def open_xz(filename, mode='r', buff=1024*1024, external=PARALLEL):
+def open_xz(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
     if WHICH_XZ:
-        if 'r' in mode:
+        if "r" in mode:
             return open_pipe("xz -dc " + filename, mode, buff)
-        elif 'w' in mode:
+        elif "w" in mode:
             return open_pipe("xz >" + filename, mode, buff)
     return None
 
 
-def zopen(filename, mode='r', buff=1024*1024, external=PARALLEL):
+def zopen(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
     """
     Open pipe, zipped, or unzipped file automagically
 
@@ -120,15 +132,15 @@ def zopen(filename, mode='r', buff=1024*1024, external=PARALLEL):
     # external == 1: (zcat, gzip) or (bzcat, bzip2)
     # external == 2: (pigz -dc, pigz) or (pbzip2 -dc, pbzip2)
     """
-    if 'r' in mode and 'w' in mode:
+    if "r" in mode and "w" in mode:
         return None
-    if filename.startswith('!'):
+    if filename.startswith("!"):
         return open_pipe(filename[1:], mode, buff)
-    elif filename.endswith('.bz2'):
+    elif filename.endswith(".bz2"):
         return open_bz2(filename, mode, buff, external)
-    elif filename.endswith('.gz'):
+    elif filename.endswith(".gz"):
         return open_gz(filename, mode, buff, external)
-    elif filename.endswith('.xz'):
+    elif filename.endswith(".xz"):
         return open_xz(filename, mode, buff, external)
     else:
         return open(filename, mode, buff)
