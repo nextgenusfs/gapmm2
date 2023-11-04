@@ -302,8 +302,11 @@ def right_update_paf_minus(paf, align, slide, offset):
             assert intron_len > 0, "Introns cannot be less than zero"
         except AssertionError as e:
             print(f"Assertion failed: {str(e)}")
-            print(paf)
-            print(align)
+            print(f"function=right_update_paf_minus")
+            print(f"paf={paf}")
+            print(f"align={align}")
+            print(f"slide={slide}")
+            print(f"offset={offset}")
             raise SystemExit(1)
         new_cs = "cs:Z::{}~ct{}ac{}".format(
             align["cigar"].strip("="), intron_len, new_cs_str
