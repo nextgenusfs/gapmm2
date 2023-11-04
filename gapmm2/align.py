@@ -307,6 +307,7 @@ def right_update_paf_minus(paf, align, slide, offset):
             print(f"align={align}")
             print(f"slide={slide}")
             print(f"offset={offset}")
+            print(f"old_cs_tup={old_cs_tup}")
             raise SystemExit(1)
         new_cs = "cs:Z::{}~ct{}ac{}".format(
             align["cigar"].strip("="), intron_len, new_cs_str
