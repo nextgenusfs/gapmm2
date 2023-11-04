@@ -146,7 +146,13 @@ def left_update_paf_plus(paf, align, slide, offset):
         for x in old_cs_tup:
             new_cs_str += "{}{}".format(x[0], x[1])
         intron_len = (old_st + slide) - (lp[1] + 1 + offset)
-        assert intron_len > 0, "Introns cannot be less than zero"
+        try:
+            assert intron_len > 0, "Introns cannot be less than zero"
+        except AssertionError as e:
+            print(f"Assertion failed at the {str(e)} line")
+            print(paf)
+            print(new_cs_str)
+            raise SystemExit(1)
         new_cs = "cs:Z::{}~gt{}ag{}".format(
             align["cigar"].strip("="), intron_len, new_cs_str
         )
@@ -190,7 +196,13 @@ def left_update_paf_minus(paf, align, slide, offset):
         for x in old_cs_tup:
             new_cs_str += "{}{}".format(x[0], x[1])
         intron_len = (lp[0] + offset) - (old_en - slide)
-        assert intron_len > 0, "Introns cannot be less than zero"
+        try:
+            assert intron_len > 0, "Introns cannot be less than zero"
+        except AssertionError as e:
+            print(f"Assertion failed at the {str(e)} line")
+            print(paf)
+            print(new_cs_str)
+            raise SystemExit(1)
         new_cs = "cs:Z:{}~ct{}ac:{}".format(
             new_cs_str, intron_len, align["cigar"].strip("=")
         )
@@ -236,7 +248,13 @@ def right_update_paf_plus(paf, align, slide, offset):
         for x in old_cs_tup:
             new_cs_str += "{}{}".format(x[0], x[1])
         intron_len = (lp[0] + offset) - (old_en - slide)
-        assert intron_len > 0, "Introns cannot be less than zero"
+        try:
+            assert intron_len > 0, "Introns cannot be less than zero"
+        except AssertionError as e:
+            print(f"Assertion failed at the {str(e)} line")
+            print(paf)
+            print(new_cs_str)
+            raise SystemExit(1)
         new_cs = "cs:Z:{}~gt{}ag:{}".format(
             old_cs, intron_len, align["cigar"].strip("=")
         )
@@ -280,7 +298,13 @@ def right_update_paf_minus(paf, align, slide, offset):
         for x in old_cs_tup:
             new_cs_str += "{}{}".format(x[0], x[1])
         intron_len = (old_st - slide) - (lp[1] + 1 + offset)
-        assert intron_len > 0, "Introns cannot be less than zero"
+        try:
+            assert intron_len > 0, "Introns cannot be less than zero"
+        except AssertionError as e:
+            print(f"Assertion failed at the {str(e)} line")
+            print(paf)
+            print(new_cs_str)
+            raise SystemExit(1)
         new_cs = "cs:Z::{}~ct{}ac{}".format(
             align["cigar"].strip("="), intron_len, new_cs_str
         )
