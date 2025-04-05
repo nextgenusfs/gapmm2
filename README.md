@@ -150,16 +150,3 @@ Gapmm2 requires the following Python packages:
 
 These dependencies will be automatically installed when you install gapmm2 using pip or conda.
 
-### Testing
-
-Gapmm2 includes a test suite that can be run using pytest. To run the tests, first install pytest:
-
-```bash
-pip install pytest
-```
-
-Then run the tests from the root directory of the repository:
-
-```bash
-python -m pytest tests/
-```
