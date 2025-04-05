@@ -33,5 +33,13 @@ Repository = "https://github.com/nextgenusfs/gapmm2.git"
 [project.scripts]
 gapmm2 = "gapmm2.__main__:main"
 
-[tool.setuptools]
-packages = ["gapmm2"]
+
+[tool.hatch.build]
+include = [
+  "gapmm2/*.py",
+  "README.md",
+  "LICENSE.md"
+]
+exclude = [
+  "tests/*",
+]
