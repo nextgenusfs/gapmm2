@@ -3,7 +3,7 @@
 
 # gapmm2: gapped alignment using minimap2
 
-This tool is a wrapper for minimap2 to run spliced/gapped alignment, ie aligning transcripts to a genome.   You are probably saying, yes minimap2 runs this with `-x splice --cs` option (you are correct).  However, there are instances where the terminal exons from stock minimap2 alignments are missing. This tool detects those alignments that have unaligned terminal eons and uses `edlib` to find the terminal exon positions. The tool then updates the PAF output file with the updated information. 
+This tool is a wrapper for minimap2 to run spliced/gapped alignment, ie aligning transcripts to a genome.   You are probably saying, yes minimap2 runs this with `-x splice --cs` option (you are correct).  However, there are instances where the terminal exons from stock minimap2 alignments are missing. This tool detects those alignments that have unaligned terminal eons and uses `edlib` to find the terminal exon positions. The tool then updates the PAF output file with the updated information.
 
 #### Rationale
 
@@ -79,9 +79,15 @@ Help:
 
 
 
-It can also be run as a python module.  The `splice_aligner` function will return a list of lists containing PAF formatted data for each alignment and a dictionary of simple stats.
+### Python API
 
-```
+It can also be run as a python module. The module provides several functions for working with spliced alignments:
+
+#### `splice_aligner` function
+
+The main function for aligning transcripts to a genome. It returns a list of lists containing PAF formatted data for each alignment and a dictionary of simple stats.
+
+```python
 >>> from gapmm2.align import splice_aligner
 >>> results, stats = splice_aligner('genome.fa', 'transcripts.fa')
 >>> stats
@@ -90,18 +96,70 @@ It can also be run as a python module.  The `splice_aligner` function will retur
 6926
 >>> results[0]
 ['OPO1_000001-T1', 2184, 0, 2184, '+', 'scaffold_1', 1803704, 887, 3127, 2184, 2184, 60, 'tp:A:P', 'ts:A:+', 'NM:i:0', 'cs:Z::958~gt56ag:1226']
->>> 
+```
+
+#### `cs2coords` function
+
+This function parses the CIGAR string (cs) from minimap2 and converts it to genomic coordinates, identifying exons, introns, and other alignment features.
+
+```python
+>>> from gapmm2.align import cs2coords
+>>> cs2coords(408903, 0, 543, '-', ':129~ct57ac:166~ct64ac:235~ct54ac:13')
+([(409609, 409621), (409320, 409554), (409090, 409255), (408904, 409032)], [(0, 13), (13, 248), (248, 414), (414, 543)], 0, 0, True)
+```
+
+#### `paf2gff3` function
+
+This function converts PAF format alignments to GFF3 format.
+
+```python
+>>> from gapmm2.align import splice_aligner, paf2gff3
+>>> results, stats = splice_aligner('genome.fa', 'transcripts.fa')
+>>> paf2gff3(results, output='output.gff3')
 ```
 
 
 
-To install the python package, you can do this with pip:
+### Installation
 
-```
-python -m pip install gapmm2
+You can install gapmm2 using pip:
+
+```bash
+pip install gapmm2
 ```
 
-To install the most updated code in master you can run:
+Or you can install the latest development version directly from GitHub:
+
+```bash
+pip install git+https://github.com/nextgenusfs/gapmm2.git
 ```
-python -m pip install git+https://github.com/nextgenusfs/gapmm2.git
+
+You can also install from conda:
+
+```bash
+conda install -c bioconda gapmm2
+```
+
+### Dependencies
+
+Gapmm2 requires the following Python packages:
+
+- mappy (Python bindings for minimap2)
+- edlib (for sequence alignment)
+- natsort (for natural sorting)
+
+These dependencies will be automatically installed when you install gapmm2 using pip or conda.
+
+### Testing
+
+Gapmm2 includes a test suite that can be run using pytest. To run the tests, first install pytest:
+
+```bash
+pip install pytest
+```
+
+Then run the tests from the root directory of the repository:
+
+```bash
+python -m pytest tests/
 ```

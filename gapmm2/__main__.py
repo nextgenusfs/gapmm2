@@ -5,8 +5,8 @@ import os
 import argparse
 import shutil
 import subprocess
-from .__version__ import __version__
 import textwrap as _textwrap
+from . import __version__
 from .align import align
 
 

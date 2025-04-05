@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gapmm2"
+version = "25.4.5"
+description = "gapmm2: gapped alignment using minimap2"
+readme = "README.md"
+authors = [
+    {name = "Jon Palmer", email = "nextgenusfs@gmail.com"},
+]
+license = {text = "BSD-2-Clause"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Operating System :: Unix",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+requires-python = ">=3.6.0"
+dependencies = [
+    "mappy",
+    "edlib",
+    "natsort",
+]
+
+[project.urls]
+Homepage = "https://github.com/nextgenusfs/gapmm2"
+Repository = "https://github.com/nextgenusfs/gapmm2.git"
+
+[project.scripts]
+gapmm2 = "gapmm2.__main__:main"
+
+[tool.setuptools]
+packages = ["gapmm2"]

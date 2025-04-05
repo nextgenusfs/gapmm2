@@ -42,7 +42,19 @@ degenNuc = [
 
 
 def find_all_splice_GT(seq, offset=6):
-    # check reference end for splice donor, might be off by a few bp when small exons missed
+    """
+    Find all potential GT splice donor sites in a sequence.
+
+    This function checks the reference end for splice donor sites, which might be off by a few
+    base pairs when small exons are missed.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        offset (int, optional): The maximum offset to search. Defaults to 6.
+
+    Returns:
+        list: A list of positions where GT splice donor sites were found.
+    """
     possible = []
     for i in range(0, offset):
         pos = offset - i
@@ -52,7 +64,19 @@ def find_all_splice_GT(seq, offset=6):
 
 
 def find_all_splice_AG(seq, offset=6):
-    # check reference end for splice acceptor, might be off by a few bp when small exons missed
+    """
+    Find all potential AG splice acceptor sites in a sequence.
+
+    This function checks the reference end for splice acceptor sites, which might be off by a few
+    base pairs when small exons are missed.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        offset (int, optional): The maximum offset to search. Defaults to 6.
+
+    Returns:
+        list: A list of positions where AG splice acceptor sites were found.
+    """
     possible = []
     for i in range(0, offset):
         pos = offset - i
@@ -62,7 +86,19 @@ def find_all_splice_AG(seq, offset=6):
 
 
 def find_all_splice_AC(seq, offset=6):
-    # check reference end for splice acceptor, might be off by a few bp when small exons missed
+    """
+    Find all potential AC splice acceptor sites in a sequence.
+
+    This function checks the reference end for splice acceptor sites, which might be off by a few
+    base pairs when small exons are missed.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        offset (int, optional): The maximum offset to search. Defaults to 6.
+
+    Returns:
+        list: A list of positions where AC splice acceptor sites were found.
+    """
     possible = []
     for i in range(0, offset):
         pos = offset - i
@@ -72,7 +108,19 @@ def find_all_splice_AC(seq, offset=6):
 
 
 def find_all_splice_CT(seq, offset=6):
-    # check reference end for splice acceptor, might be off by a few bp when small exons missed
+    """
+    Find all potential CT splice donor sites in a sequence.
+
+    This function checks the reference end for splice donor sites, which might be off by a few
+    base pairs when small exons are missed.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        offset (int, optional): The maximum offset to search. Defaults to 6.
+
+    Returns:
+        list: A list of positions where CT splice donor sites were found.
+    """
     possible = []
     for i in range(0, offset):
         pos = offset - i
@@ -82,7 +130,19 @@ def find_all_splice_CT(seq, offset=6):
 
 
 def filter4_splice_GT(seq, align):
-    # given sequence and edlib object, loop through and filter for GT splice sites
+    """
+    Filter alignment locations for GT splice donor sites.
+
+    Given a sequence and an edlib alignment object, this function filters the alignment
+    locations to keep only those that end with a GT splice donor site.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        align (dict): An edlib alignment object with a 'locations' key.
+
+    Returns:
+        dict: The filtered edlib alignment object.
+    """
     filter = []
     for x in align["locations"]:
         if seq[x[0] : x[1] + 3].endswith("GT"):
@@ -92,7 +152,19 @@ def filter4_splice_GT(seq, align):
 
 
 def filter4_splice_AC(seq, align):
-    # given sequence and edlib object, loop through and filter for AC splice sites
+    """
+    Filter alignment locations for AC splice acceptor sites.
+
+    Given a sequence and an edlib alignment object, this function filters the alignment
+    locations to keep only those that start with an AC splice acceptor site.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        align (dict): An edlib alignment object with a 'locations' key.
+
+    Returns:
+        dict: The filtered edlib alignment object.
+    """
     filter = []
     for x in align["locations"]:
         if seq[x[0] - 2 : x[1] + 1].startswith("AC"):
@@ -102,6 +174,19 @@ def filter4_splice_AC(seq, align):
 
 
 def filter4_splice_AG(seq, align):
+    """
+    Filter alignment locations for AG splice acceptor sites.
+
+    Given a sequence and an edlib alignment object, this function filters the alignment
+    locations to keep only those that start with an AG splice acceptor site.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        align (dict): An edlib alignment object with a 'locations' key.
+
+    Returns:
+        dict: The filtered edlib alignment object.
+    """
     filter = []
     for x in align["locations"]:
         if seq[x[0] - 2 : x[1] + 1].startswith("AG"):
@@ -111,6 +196,19 @@ def filter4_splice_AG(seq, align):
 
 
 def filter4_splice_CT(seq, align):
+    """
+    Filter alignment locations for CT splice donor sites.
+
+    Given a sequence and an edlib alignment object, this function filters the alignment
+    locations to keep only those that end with a CT splice donor site.
+
+    Args:
+        seq (str): The DNA sequence to search.
+        align (dict): An edlib alignment object with a 'locations' key.
+
+    Returns:
+        dict: The filtered edlib alignment object.
+    """
     filter = []
     for x in align["locations"]:
         if seq[x[0] : x[1] + 1 + 2].endswith("CT"):
@@ -453,12 +551,32 @@ def right_minus_best_align(
 
 def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
     """
-    # splicing plus strand, GT-AG junctions
-    ATG GGC | GTX  ------- XAG | GCC TAA
+    Perform spliced alignment of transcripts to a genome using minimap2 and refine terminal alignments with edlib.
 
-    # splicing rev strand, CT-AC junctions
-    TTA GGC | CTX ------- XAC GCC CAT
+    This function aligns transcripts to a genome using minimap2 with splice options, and then refines
+    the terminal alignments using edlib to improve the alignment of terminal exons that might be missed
+    by minimap2. The function handles both forward and reverse strand alignments, recognizing the
+    appropriate splice junctions for each strand.
 
+    Splice junctions:
+    - Plus strand: GT-AG junctions (ATG GGC | GTX  ------- XAG | GCC TAA)
+    - Reverse strand: CT-AC junctions (TTA GGC | CTX ------- XAC GCC CAT)
+
+    Args:
+        reference (str): Path to the reference genome FASTA file.
+        query (str): Path to the query transcripts FASTA or FASTQ file.
+        threads (int, optional): Number of threads to use with minimap2. Defaults to 3.
+        min_mapq (int, optional): Minimum mapping quality value to keep an alignment. Defaults to 1.
+        max_intron (int, optional): Maximum intron length, controls terminal search space. Defaults to 500.
+
+    Returns:
+        tuple: A tuple containing:
+            - list: A list of lists, where each inner list contains PAF formatted data for an alignment.
+            - dict: A dictionary with statistics about the alignments, including:
+                - 'n': Total number of alignments.
+                - 'low-mapq': Number of alignments dropped due to low mapping quality.
+                - 'refine-left': Number of alignments where the left side was refined.
+                - 'refine-right': Number of alignments where the right side was refined.
     """
     results = []
     stats = {"n": 0, "low-mapq": 0, "refine-left": 0, "refine-right": 0}
@@ -579,14 +697,37 @@ def cs2coords(
     splice_acceptor=["ag", "ac"],
 ):
     """
-    # From minimap2 manual this is the cs flag definitions
-    Op	Regex	Description
-    =	[ACGTN]+	Identical sequence (long form)
-    :	[0-9]+	Identical sequence length
-    *	[acgtn][acgtn]	Substitution: ref to query
-    +	[acgtn]+	Insertion to the reference
-    -	[acgtn]+	Deletion from the reference
-    ~	[acgtn]{2}[0-9]+[acgtn]{2}	Intron length and splice signal
+    Convert a CIGAR string (cs) from minimap2 to genomic coordinates.
+
+    This function parses the CIGAR string from minimap2 and converts it to genomic coordinates,
+    identifying exons, introns, and other alignment features. It handles both forward and reverse
+    strand alignments, and can recognize proper splice sites.
+
+    From minimap2 manual, the cs flag definitions are:
+    - Op: =, Regex: [ACGTN]+, Description: Identical sequence (long form)
+    - Op: :, Regex: [0-9]+, Description: Identical sequence length
+    - Op: *, Regex: [acgtn][acgtn], Description: Substitution: ref to query
+    - Op: +, Regex: [acgtn]+, Description: Insertion to the reference
+    - Op: -, Regex: [acgtn]+, Description: Deletion from the reference
+    - Op: ~, Regex: [acgtn]{2}[0-9]+[acgtn]{2}, Description: Intron length and splice signal
+
+    Args:
+        start (int): The start position in the reference genome.
+        qstart (int): The start position in the query sequence.
+        length (int): The length of the query sequence.
+        strand (str): The strand of the alignment ("+" or "-").
+        cs (str): The CIGAR string from minimap2.
+        offset (int, optional): Offset to add to the exon coordinates. Defaults to 1.
+        splice_donor (list, optional): List of splice donor sequences. Defaults to ["gt", "at"].
+        splice_acceptor (list, optional): List of splice acceptor sequences. Defaults to ["ag", "ac"].
+
+    Returns:
+        tuple: A tuple containing:
+            - list: A list of exon coordinates as tuples (start, end).
+            - list: A list of query coordinates as tuples (start, end).
+            - int: Number of mismatches in the alignment.
+            - int: Number of gaps in the alignment.
+            - bool: Whether the alignment has proper splice sites.
     """
     cs = cs.replace("cs:Z:", "")
     ProperSplice = True
@@ -650,6 +791,19 @@ def cs2coords(
 
 
 def paf2gff3(paf, output=False, minpident=0):
+    """
+    Convert PAF format alignments to GFF3 format.
+
+    This function takes a list of PAF format alignments and converts them to GFF3 format,
+    writing the output to a file or stdout. It calculates the percent identity for each
+    alignment and filters out alignments below a minimum percent identity threshold.
+
+    Args:
+        paf (list): A list of lists, where each inner list contains PAF formatted data for an alignment.
+        output (str, optional): Path to the output file. If False, writes to stdout. Defaults to False.
+        minpident (float, optional): Minimum percent identity threshold. Alignments below this threshold
+            will be filtered out. Defaults to 0.
+    """
     if output:
         outfile = zopen(output, mode="w")
     else:
@@ -707,6 +861,23 @@ def aligner(
     max_intron=500,
     debug=False,
 ):
+    """
+    Wrapper function for spliced alignment that writes results to a file or stdout.
+
+    This function is the main entry point for the command-line interface. It performs spliced
+    alignment using the splice_aligner function and writes the results to a file or stdout in
+    the specified format.
+
+    Args:
+        reference (str): Path to the reference genome FASTA file.
+        query (str): Path to the query transcripts FASTA or FASTQ file.
+        output (str, optional): Path to the output file. If False, writes to stdout. Defaults to False.
+        threads (int, optional): Number of threads to use with minimap2. Defaults to 3.
+        out_fmt (str, optional): Output format, either "paf" or "gff3". Defaults to "paf".
+        min_mapq (int, optional): Minimum mapping quality value to keep an alignment. Defaults to 1.
+        max_intron (int, optional): Maximum intron length, controls terminal search space. Defaults to 500.
+        debug (bool, optional): Whether to write debug information to stderr. Defaults to False.
+    """
     # wrapper for spliced alignment for script to write to file
     if output:
         outfile = zopen(output, mode="w")
@@ -732,6 +903,16 @@ def aligner(
 
 
 def align(args):
+    """
+    Entry point for the command-line interface.
+
+    This function is called from the __main__.py file and is the entry point for the
+    command-line interface. It checks the input files and calls the aligner function
+    with the appropriate arguments.
+
+    Args:
+        args: An argparse.Namespace object containing the command-line arguments.
+    """
     check_inputs([args.reference, args.query])
     aligner(
         args.reference,
