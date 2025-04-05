@@ -43,3 +43,24 @@ include = [
 exclude = [
   "tests/*",
 ]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''/(\n  # Directories
+  \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100

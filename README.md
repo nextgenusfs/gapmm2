@@ -1,5 +1,6 @@
 [![Latest Github release](https://img.shields.io/github/release/nextgenusfs/gapmm2.svg)](https://github.com/nextgenusfs/gapmm2/releases/latest)
 ![Conda](https://img.shields.io/conda/dn/bioconda/gapmm2)
+[![codecov](https://codecov.io/gh/nextgenusfs/gapmm2/graph/badge.svg?token=THI1LXFFNX)](https://codecov.io/gh/nextgenusfs/gapmm2)
 
 # gapmm2: gapped alignment using minimap2
 
@@ -150,3 +151,44 @@ Gapmm2 requires the following Python packages:
 
 These dependencies will be automatically installed when you install gapmm2 using pip or conda.
 
+### Development
+
+#### Testing
+
+Gapmm2 includes a test suite that can be run using pytest. To run the tests, first install pytest:
+
+```bash
+pip install pytest pytest-cov
+```
+
+Then run the tests from the root directory of the repository:
+
+```bash
+python -m pytest tests/ --cov=gapmm2
+```
+
+#### Code Formatting
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality and consistency. The pre-commit hooks run Black (code formatter), isort (import sorter), and flake8 (linter).
+
+To set up pre-commit:
+
+1. Install pre-commit:
+
+```bash
+pip install pre-commit
+```
+
+2. Install the git hooks:
+
+```bash
+pre-commit install
+```
+
+3. (Optional) Run against all files:
+
+```bash
+pre-commit run --all-files
+```
+
+After installation, the pre-commit hooks will run automatically on each commit to ensure your code follows the project's style guidelines.
