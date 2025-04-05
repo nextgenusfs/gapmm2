@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-import sys
-import os
 import argparse
+import os
 import shutil
 import subprocess
+import sys
 import textwrap as _textwrap
+
 from . import __version__
 from .align import align
-
 
 END_FORMATTING = "\033[0m"
 BOLD = "\033[1m"
@@ -32,11 +32,10 @@ def parse_args(args):
         BOLD
         + "gapmm2: gapped alignment with minimap2."
         + END_FORMATTING
-        + " Performs minimap2/mappy alignment with splice options and refines terminal alignments with edlib."
+        + " Performs minimap2/mappy alignment with splice options and refines"
+        + " terminal alignments with edlib."
     )
-    parser = MyParser(
-        description=description, formatter_class=MyHelpFormatter, add_help=False
-    )
+    parser = MyParser(description=description, formatter_class=MyHelpFormatter, add_help=False)
     required_args = parser.add_argument_group("Positional arguments")
     required_args.add_argument("reference", help="reference genome (FASTA)")
     required_args.add_argument("query", help="transcipts in FASTA or FASTQ")
@@ -105,9 +104,11 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-## formatting clases for argparse below
+# Formatting classes for argparse below
 class MyParser(argparse.ArgumentParser):
     """
+    Custom ArgumentParser that improves error messages.
+
     This subclass of ArgumentParser changes the error messages, such that if a command is run with
     no other arguments, it will display the help text. If there is a different error, it will give
     the normal response (usage and error).
@@ -123,6 +124,8 @@ class MyParser(argparse.ArgumentParser):
 
 class MyHelpFormatter(argparse.HelpFormatter):
     """
+    Custom formatter for argparse help text.
+
     This is a custom formatter class for argparse. It allows for some custom formatting,
     in particular for the help texts with multiple options (like bridging mode and verbosity level).
     http://stackoverflow.com/questions/3853722
@@ -137,6 +140,8 @@ class MyHelpFormatter(argparse.HelpFormatter):
 
     def _get_help_string(self, action):
         """
+        Add default values to help text.
+
         Override this function to add default values, but only when 'default' is not already in the
         help text.
         """
@@ -151,15 +156,15 @@ class MyHelpFormatter(argparse.HelpFormatter):
         return help_text
 
     def start_section(self, heading):
-        """
-        Override this method to add bold underlining to section headers.
-        """
+        """Add bold underlining to section headers."""
         if self.colours > 1:
             heading = BOLD + heading + END_FORMATTING
         super().start_section(heading)
 
     def _split_lines(self, text, width):
         """
+        Add special behavior for help texts with R| prefix.
+
         Override this method to add special behaviour for help texts that start with:
           'R|' - loop text one option per line
         """

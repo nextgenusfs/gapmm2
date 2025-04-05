@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import os
-import pytest
 import tempfile
+
+import pytest
 
 
 @pytest.fixture
@@ -19,12 +20,12 @@ def temp_fasta_files():
             f.write("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT\n")
             f.write("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT\n")
             f.write("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT\n")
-        
+
         # Create a query transcript FASTA file
         query_path = os.path.join(tmpdir, "query.fa")
         with open(query_path, "w") as f:
             f.write(">transcript_1\n")
             f.write("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT\n")
             f.write("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT\n")
-        
+
         yield ref_path, query_path

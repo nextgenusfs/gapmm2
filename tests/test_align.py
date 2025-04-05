@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import pytest
-from gapmm2.align import cs2tuples, cs2coords
+from gapmm2.align import cs2coords, cs2tuples
 
 
 def test_cs2tuples():
@@ -40,9 +39,7 @@ def test_cs2coords_forward_strand():
     strand = "+"
     cs = ":100"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1001, 1100)]  # 1-based coordinates with offset=1
     assert queries == [(0, 100)]
@@ -57,9 +54,7 @@ def test_cs2coords_forward_strand():
     strand = "+"
     cs = ":100~gt50ag:100"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1001, 1100), (1151, 1250)]
     assert queries == [(0, 100), (101, 200)]
@@ -74,9 +69,7 @@ def test_cs2coords_forward_strand():
     strand = "+"
     cs = ":50*at:49"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1001, 1099)]
     assert queries == [(0, 100)]
@@ -94,9 +87,7 @@ def test_cs2coords_reverse_strand():
     strand = "-"
     cs = ":100"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1001, 1100)]
     assert queries == [(0, 100)]
@@ -111,9 +102,7 @@ def test_cs2coords_reverse_strand():
     strand = "-"
     cs = ":100~ct50ac:100"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1151, 1250), (1001, 1100)]
     assert queries == [(0, 100), (101, 200)]
@@ -131,9 +120,7 @@ def test_cs2coords_with_indels():
     strand = "+"
     cs = ":50+aaa:50"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1001, 1103)]
     assert queries == [(0, 103)]
@@ -148,9 +135,7 @@ def test_cs2coords_with_indels():
     strand = "+"
     cs = ":50-ggg:50"
 
-    exons, queries, mismatches, gaps, proper_splice = cs2coords(
-        start, qstart, length, strand, cs
-    )
+    exons, queries, mismatches, gaps, proper_splice = cs2coords(start, qstart, length, strand, cs)
 
     assert exons == [(1001, 1103)]
     assert queries == [(0, 97)]

@@ -19,7 +19,7 @@ def which2(program):
     def is_exe(fpath):
         return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-    fpath, fname = os.path.split(program)
+    fpath, _ = os.path.split(program)
     if fpath:
         if is_exe(program):
             return program
@@ -33,8 +33,8 @@ def which2(program):
 
 
 def open_pipe(command, mode="r", buff=1024 * 1024):
-    import subprocess
     import signal
+    import subprocess
 
     if "r" in mode:
         return subprocess.Popen(
@@ -126,7 +126,7 @@ def open_xz(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
 
 def zopen(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
     """
-    Open pipe, zipped, or unzipped file automagically
+    Open pipe, zipped, or unzipped file automagically.
 
     # external == 0: normal zip libraries
     # external == 1: (zcat, gzip) or (bzcat, bzip2)
@@ -144,4 +144,3 @@ def zopen(filename, mode="r", buff=1024 * 1024, external=PARALLEL):
         return open_xz(filename, mode, buff, external)
     else:
         return open(filename, mode, buff)
-    return None

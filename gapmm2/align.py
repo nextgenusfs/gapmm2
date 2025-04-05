@@ -1,9 +1,10 @@
 import sys
-import mappy as mp
-import edlib
-from natsort import natsorted
-from .utils import zopen, check_inputs
 
+import edlib
+import mappy as mp
+from natsort import natsorted
+
+from .utils import check_inputs, zopen
 
 degenNuc = [
     ("R", "A"),
@@ -246,11 +247,9 @@ def left_update_paf_plus(paf, align, slide, offset):
         intron_len = (old_st + slide) - (lp[1] + 1 + offset)
         try:
             assert intron_len > 0, "Introns cannot be less than zero"
-        except AssertionError as e:
+        except AssertionError:
             return paf
-        new_cs = "cs:Z::{}~gt{}ag{}".format(
-            align["cigar"].strip("="), intron_len, new_cs_str
-        )
+        new_cs = "cs:Z::{}~gt{}ag{}".format(align["cigar"].strip("="), intron_len, new_cs_str)
         try:
             matches, bases = cs2matches(new_cs)
         except ValueError:
@@ -293,11 +292,9 @@ def left_update_paf_minus(paf, align, slide, offset):
         intron_len = (lp[0] + offset) - (old_en - slide)
         try:
             assert intron_len > 0, "Introns cannot be less than zero"
-        except AssertionError as e:
+        except AssertionError:
             return paf
-        new_cs = "cs:Z:{}~ct{}ac:{}".format(
-            new_cs_str, intron_len, align["cigar"].strip("=")
-        )
+        new_cs = "cs:Z:{}~ct{}ac:{}".format(new_cs_str, intron_len, align["cigar"].strip("="))
         try:
             matches, bases = cs2matches(new_cs)
         except ValueError:
@@ -342,11 +339,9 @@ def right_update_paf_plus(paf, align, slide, offset):
         intron_len = (lp[0] + offset) - (old_en - slide)
         try:
             assert intron_len > 0, "Introns cannot be less than zero"
-        except AssertionError as e:
+        except AssertionError:
             return paf
-        new_cs = "cs:Z:{}~gt{}ag:{}".format(
-            old_cs, intron_len, align["cigar"].strip("=")
-        )
+        new_cs = "cs:Z:{}~gt{}ag:{}".format(old_cs, intron_len, align["cigar"].strip("="))
         try:
             matches, bases = cs2matches(new_cs)
         except ValueError:
@@ -389,11 +384,9 @@ def right_update_paf_minus(paf, align, slide, offset):
         intron_len = (old_st - slide) - (lp[1] + 1 + offset)
         try:
             assert intron_len > 0, "Introns cannot be less than zero"
-        except AssertionError as e:
+        except AssertionError:
             return paf
-        new_cs = "cs:Z::{}~ct{}ac{}".format(
-            align["cigar"].strip("="), intron_len, new_cs_str
-        )
+        new_cs = "cs:Z::{}~ct{}ac{}".format(align["cigar"].strip("="), intron_len, new_cs_str)
         try:
             matches, bases = cs2matches(new_cs)
         except ValueError:
@@ -445,9 +438,7 @@ def cs2tuples(cs, separators=[":", "*", "+", "-", "~"]):
     return tupList
 
 
-def left_plus_best_align(
-    paf, refseq, contig, refstart, queryseq, querystart, offset=6, maxlen=500
-):
+def left_plus_best_align(paf, refseq, contig, refstart, queryseq, querystart, offset=6, maxlen=500):
     keep = []
     if refstart - maxlen < 0:
         r_st = 0
@@ -457,9 +448,7 @@ def left_plus_best_align(
     slides = find_all_splice_AG(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = queryseq[0 : querystart + slide]
-        align = edlib.align(
-            query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc
-        )
+        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
         align = filter4_splice_GT(ref, align)
         if len(align["locations"]) < 1:
             continue
@@ -471,9 +460,7 @@ def left_plus_best_align(
     return paf
 
 
-def left_minus_best_align(
-    paf, refseq, contig, refend, queryseq, querystart, offset=6, maxlen=500
-):
+def left_minus_best_align(paf, refseq, contig, refend, queryseq, querystart, offset=6, maxlen=500):
     keep = []
     if refend + maxlen > len(refseq.seq(contig)):
         r_en = len(refseq.seq(contig))
@@ -483,9 +470,7 @@ def left_minus_best_align(
     slides = find_all_splice_CT(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = mp.revcomp(queryseq[0 : querystart + slide])
-        align = edlib.align(
-            query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc
-        )
+        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
         align = filter4_splice_AC(ref, align)
         if len(align["locations"]) < 1:
             continue
@@ -497,9 +482,7 @@ def left_minus_best_align(
     return paf
 
 
-def right_plus_best_align(
-    paf, refseq, contig, refend, queryseq, queryend, offset=6, maxlen=500
-):
+def right_plus_best_align(paf, refseq, contig, refend, queryseq, queryend, offset=6, maxlen=500):
     keep = []
     if refend + maxlen > len(refseq.seq(contig)):
         r_en = len(refseq.seq(contig))
@@ -509,9 +492,7 @@ def right_plus_best_align(
     slides = find_all_splice_GT(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = queryseq[queryend - slide :]
-        align = edlib.align(
-            query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc
-        )
+        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
         align = filter4_splice_AG(ref, align)
         if len(align["locations"]) < 1:
             continue
@@ -523,9 +504,7 @@ def right_plus_best_align(
     return paf
 
 
-def right_minus_best_align(
-    paf, refseq, contig, refstart, queryseq, queryend, offset=6, maxlen=500
-):
+def right_minus_best_align(paf, refseq, contig, refstart, queryseq, queryend, offset=6, maxlen=500):
     keep = []
     if refstart - maxlen < 0:
         r_st = 0
@@ -535,9 +514,7 @@ def right_minus_best_align(
     slides = find_all_splice_AC(ref, offset=offset)
     for slide in slides:  # look through possible splice sites
         query = mp.revcomp(queryseq[queryend - slide :])
-        align = edlib.align(
-            query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc
-        )
+        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
         align = filter4_splice_CT(ref, align)
         if len(align["locations"]) < 1:
             continue
@@ -586,7 +563,7 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
     if not ref_idx:
         raise Exception("ERROR: failed to load/build index of {}".format(reference))
     # now go through query aligning to ref
-    for name, seq, qual in mp.fastx_read(query):
+    for name, seq, _ in mp.fastx_read(query):
         for h in ref_idx.map(seq, cs=True):
             stats["n"] += 1
             if h.mapq < min_mapq:
@@ -655,9 +632,7 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
                     )
                 if paf[-1] != cs:
                     stats["refine-left"] += 1
-            if (
-                len(seq) > h.q_en
-            ):  # refine alignment for last exon or right side of query
+            if len(seq) > h.q_en:  # refine alignment for last exon or right side of query
                 if strand == "+":
                     paf = right_plus_best_align(
                         paf,
@@ -814,9 +789,7 @@ def paf2gff3(paf, output=False, minpident=0):
     count = 1
     sorted_paf = natsorted(paf, key=lambda x: (x[5], x[7]))
     for p in sorted_paf:
-        exons, queries, mismatches, gaps, splice = cs2coords(
-            p[7], p[2], p[9], p[4], p[-1]
-        )
+        exons, queries, mismatches, gaps, _ = cs2coords(p[7], p[2], p[9], p[4], p[-1])
         matches = p[9] - mismatches - gaps
         pident = 100 * (matches / p[9])
         if pident < minpident:
@@ -862,7 +835,7 @@ def aligner(
     debug=False,
 ):
     """
-    Wrapper function for spliced alignment that writes results to a file or stdout.
+    Write spliced alignment results to a file or stdout.
 
     This function is the main entry point for the command-line interface. It performs spliced
     alignment using the splice_aligner function and writes the results to a file or stdout in

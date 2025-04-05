@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pytest
+
 from gapmm2.utils import check_inputs, zopen
 
 
