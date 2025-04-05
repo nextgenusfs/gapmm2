@@ -26,6 +26,5 @@ repos:
     hooks:
     -   id: flake8
         args: [
-            "--max-line-length=120",  # More lenient line length
-            "--extend-ignore=E203,W503,E501,D100,D101,D102,D103,D104,D105,D107"
+            "--ignore=E501,E203,W503,D100,D101,D102,D103,D104,D105,D107",  # Ignore line length and other issues
         ]
