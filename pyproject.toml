@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gapmm2"
-version = "25.4.5"
+version = "25.4.13"
 description = "gapmm2: gapped alignment using minimap2"
 readme = "README.md"
 authors = [
@@ -23,7 +23,6 @@ requires-python = ">=3.6.0"
 dependencies = [
     "mappy",
     "edlib",
-    "natsort",
 ]
 
 [project.urls]

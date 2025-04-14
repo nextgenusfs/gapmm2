@@ -81,7 +81,13 @@ def parse_args(args):
     optional_args.add_argument(
         "-d", "--debug", action="store_true", help="write some debug info to stderr"
     )
-
+    optional_args.add_argument(
+        "-n",
+        "--no-refine",
+        dest="refine",
+        action="store_false",
+        help="do not refine mappy alignment with edlib",
+    )
     help_args = parser.add_argument_group("Help")
     help_args.add_argument(
         "-h",

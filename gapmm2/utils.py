@@ -1,5 +1,36 @@
 import errno
 import os
+import subprocess
+
+
+def execute(cmd, cwd="."):
+    """
+    Execute a shell command and yield its output line by line.
+
+    This function runs a specified command in the shell within a given working directory.
+    It yields each line of the command's standard output as it becomes available. If the
+    command exits with a non-zero status, a `subprocess.CalledProcessError` is raised.
+
+    Parameters:
+    - cmd (str): The command to be executed.
+    - cwd (str, optional): The working directory where the command will be executed (default is the current directory).
+
+    Yields:
+    - str: Each line of output from the executed command.
+
+    Raises:
+    - subprocess.CalledProcessError: If the command exits with a non-zero status.
+    """
+    DEVNULL = open(os.devnull, "w")
+    popen = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, universal_newlines=True, stderr=DEVNULL, cwd=cwd
+    )
+    for stdout_line in iter(popen.stdout.readline, ""):
+        yield stdout_line
+    popen.stdout.close()
+    return_code = popen.wait()
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, cmd)
 
 
 def check_inputs(inputs):

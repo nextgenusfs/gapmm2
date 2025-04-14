@@ -2,9 +2,8 @@ import sys
 
 import edlib
 import mappy as mp
-from natsort import natsorted
 
-from .utils import check_inputs, zopen
+from .utils import check_inputs, execute, which2, zopen
 
 degenNuc = [
     ("R", "A"),
@@ -133,21 +132,17 @@ def find_all_splice_CT(seq, offset=6):
 def filter4_splice_GT(seq, align):
     """
     Filter alignment locations for GT splice donor sites.
-
-    Given a sequence and an edlib alignment object, this function filters the alignment
-    locations to keep only those that end with a GT splice donor site.
-
-    Args:
-        seq (str): The DNA sequence to search.
-        align (dict): An edlib alignment object with a 'locations' key.
-
-    Returns:
-        dict: The filtered edlib alignment object.
     """
     filter = []
+    if "locations" not in align:
+        return align
     for x in align["locations"]:
-        if seq[x[0] : x[1] + 3].endswith("GT"):
-            filter.append(x)
+        try:
+            if x[0] < len(seq) - 2 and seq[x[0] : x[1] + 3].endswith("GT"):
+                filter.append(x)
+        except IndexError:
+            # Skip this location if it would cause an index error
+            continue
     align["locations"] = filter
     return align
 
@@ -155,21 +150,17 @@ def filter4_splice_GT(seq, align):
 def filter4_splice_AC(seq, align):
     """
     Filter alignment locations for AC splice acceptor sites.
-
-    Given a sequence and an edlib alignment object, this function filters the alignment
-    locations to keep only those that start with an AC splice acceptor site.
-
-    Args:
-        seq (str): The DNA sequence to search.
-        align (dict): An edlib alignment object with a 'locations' key.
-
-    Returns:
-        dict: The filtered edlib alignment object.
     """
     filter = []
+    if "locations" not in align:
+        return align
     for x in align["locations"]:
-        if seq[x[0] - 2 : x[1] + 1].startswith("AC"):
-            filter.append(x)
+        try:
+            if x[0] >= 2 and x[1] < len(seq) and seq[x[0] - 2 : x[1] + 1].startswith("AC"):
+                filter.append(x)
+        except IndexError:
+            # Skip this location if it would cause an index error
+            continue
     align["locations"] = filter
     return align
 
@@ -177,21 +168,17 @@ def filter4_splice_AC(seq, align):
 def filter4_splice_AG(seq, align):
     """
     Filter alignment locations for AG splice acceptor sites.
-
-    Given a sequence and an edlib alignment object, this function filters the alignment
-    locations to keep only those that start with an AG splice acceptor site.
-
-    Args:
-        seq (str): The DNA sequence to search.
-        align (dict): An edlib alignment object with a 'locations' key.
-
-    Returns:
-        dict: The filtered edlib alignment object.
     """
     filter = []
+    if "locations" not in align:
+        return align
     for x in align["locations"]:
-        if seq[x[0] - 2 : x[1] + 1].startswith("AG"):
-            filter.append(x)
+        try:
+            if x[0] >= 2 and x[1] < len(seq) and seq[x[0] - 2 : x[1] + 1].startswith("AG"):
+                filter.append(x)
+        except IndexError:
+            # Skip this location if it would cause an index error
+            continue
     align["locations"] = filter
     return align
 
@@ -199,21 +186,17 @@ def filter4_splice_AG(seq, align):
 def filter4_splice_CT(seq, align):
     """
     Filter alignment locations for CT splice donor sites.
-
-    Given a sequence and an edlib alignment object, this function filters the alignment
-    locations to keep only those that end with a CT splice donor site.
-
-    Args:
-        seq (str): The DNA sequence to search.
-        align (dict): An edlib alignment object with a 'locations' key.
-
-    Returns:
-        dict: The filtered edlib alignment object.
     """
     filter = []
+    if "locations" not in align:
+        return align
     for x in align["locations"]:
-        if seq[x[0] : x[1] + 1 + 2].endswith("CT"):
-            filter.append(x)
+        try:
+            if x[0] < len(seq) - 2 and seq[x[0] : x[1] + 1 + 2].endswith("CT"):
+                filter.append(x)
+        except IndexError:
+            # Skip this location if it would cause an index error
+            continue
     align["locations"] = filter
     return align
 
@@ -438,97 +421,178 @@ def cs2tuples(cs, separators=[":", "*", "+", "-", "~"]):
     return tupList
 
 
-def left_plus_best_align(paf, refseq, contig, refstart, queryseq, querystart, offset=6, maxlen=500):
+def left_plus_best_align(paf, refseq, queryseq, offset=6, maxlen=500):
+    # pull values from paf where possible
+    contig = paf[5]
+    refstart = paf[7]
+    querystart = paf[2]
+
     keep = []
     if refstart - maxlen < 0:
         r_st = 0
     else:
         r_st = refstart - maxlen
-    ref = refseq.seq(contig, r_st, refstart + offset)
-    slides = find_all_splice_AG(ref, offset=offset)
-    for slide in slides:  # look through possible splice sites
-        query = queryseq[0 : querystart + slide]
-        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
-        align = filter4_splice_GT(ref, align)
-        if len(align["locations"]) < 1:
-            continue
-        else:
-            keep.append((align, slide))
-    if len(keep) > 0:
-        a, s = keep[0]
-        paf = left_update_paf_plus(paf, a, s, refstart - maxlen)
+    try:
+        ref = refseq.seq(contig, r_st, refstart + offset)
+        slides = find_all_splice_AG(ref, offset=offset)
+        for slide in slides:  # look through possible splice sites
+            query = queryseq[0 : querystart + slide]
+            try:
+                align = edlib.align(
+                    query,
+                    ref,
+                    mode="HW",
+                    k=0,
+                    task="path",
+                    additionalEqualities=degenNuc,
+                )
+                align = filter4_splice_GT(ref, align)
+                if len(align["locations"]) < 1:
+                    continue
+                else:
+                    keep.append((align, slide))
+            except Exception as e:
+                # Log the error and continue
+                sys.stderr.write(f"Error in edlib alignment: {e}\n")
+                continue
+        if len(keep) > 0:
+            a, s = keep[0]
+            paf = left_update_paf_plus(paf, a, s, refstart - maxlen)
+    except Exception as e:
+        # Log the error and return the original PAF
+        sys.stderr.write(f"Error in left_plus_best_align: {e}\n")
     return paf
 
 
-def left_minus_best_align(paf, refseq, contig, refend, queryseq, querystart, offset=6, maxlen=500):
+def left_minus_best_align(paf, refseq, queryseq, offset=6, maxlen=500):
+    # get values from paf
+    contig = paf[5]
+    refend = paf[8]
+    querystart = paf[2]
     keep = []
     if refend + maxlen > len(refseq.seq(contig)):
         r_en = len(refseq.seq(contig))
     else:
         r_en = refend + maxlen
-    ref = refseq.seq(contig, refend - offset, r_en)
-    slides = find_all_splice_CT(ref, offset=offset)
-    for slide in slides:  # look through possible splice sites
-        query = mp.revcomp(queryseq[0 : querystart + slide])
-        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
-        align = filter4_splice_AC(ref, align)
-        if len(align["locations"]) < 1:
-            continue
-        else:
-            keep.append((align, slide))
-    if len(keep) > 0:
-        a, s = keep[0]
-        paf = left_update_paf_minus(paf, a, s, refend - offset)
+    try:
+        ref = refseq.seq(contig, refend - offset, r_en)
+        slides = find_all_splice_CT(ref, offset=offset)
+        for slide in slides:  # look through possible splice sites
+            query = mp.revcomp(queryseq[0 : querystart + slide])
+            try:
+                align = edlib.align(
+                    query,
+                    ref,
+                    mode="HW",
+                    k=0,
+                    task="path",
+                    additionalEqualities=degenNuc,
+                )
+                align = filter4_splice_AC(ref, align)
+                if len(align["locations"]) < 1:
+                    continue
+                else:
+                    keep.append((align, slide))
+            except Exception as e:
+                # Log the error and continue
+                sys.stderr.write(f"Error in edlib alignment: {e}\n")
+                continue
+        if len(keep) > 0:
+            a, s = keep[0]
+            paf = left_update_paf_minus(paf, a, s, refend - offset)
+    except Exception as e:
+        # Log the error and return the original PAF
+        sys.stderr.write(f"Error in left_minus_best_align: {e}\n")
     return paf
 
 
-def right_plus_best_align(paf, refseq, contig, refend, queryseq, queryend, offset=6, maxlen=500):
+def right_plus_best_align(paf, refseq, queryseq, offset=6, maxlen=500):
+    # get values from paf
+    contig = paf[5]
+    refend = paf[8]
+    queryend = paf[3]
     keep = []
     if refend + maxlen > len(refseq.seq(contig)):
         r_en = len(refseq.seq(contig))
     else:
         r_en = refend + maxlen
-    ref = refseq.seq(contig, refend - offset, r_en)
-    slides = find_all_splice_GT(ref, offset=offset)
-    for slide in slides:  # look through possible splice sites
-        query = queryseq[queryend - slide :]
-        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
-        align = filter4_splice_AG(ref, align)
-        if len(align["locations"]) < 1:
-            continue
-        else:
-            keep.append((align, slide))
-    if len(keep) > 0:
-        a, s = keep[0]
-        paf = right_update_paf_plus(paf, a, s, refend - offset)
+    try:
+        ref = refseq.seq(contig, refend - offset, r_en)
+        slides = find_all_splice_GT(ref, offset=offset)
+        for slide in slides:  # look through possible splice sites
+            query = queryseq[queryend - slide :]
+            try:
+                align = edlib.align(
+                    query,
+                    ref,
+                    mode="HW",
+                    k=0,
+                    task="path",
+                    additionalEqualities=degenNuc,
+                )
+                align = filter4_splice_AG(ref, align)
+                if len(align["locations"]) < 1:
+                    continue
+                else:
+                    keep.append((align, slide))
+            except Exception as e:
+                # Log the error and continue
+                sys.stderr.write(f"Error in edlib alignment: {e}\n")
+                continue
+        if len(keep) > 0:
+            a, s = keep[0]
+            paf = right_update_paf_plus(paf, a, s, refend - offset)
+    except Exception as e:
+        # Log the error and return the original PAF
+        sys.stderr.write(f"Error in right_plus_best_align: {e}\n")
     return paf
 
 
-def right_minus_best_align(paf, refseq, contig, refstart, queryseq, queryend, offset=6, maxlen=500):
+def right_minus_best_align(paf, refseq, queryseq, offset=6, maxlen=500):
+    # get values from paf
+    contig = paf[5]
+    refstart = paf[7]
+    queryend = paf[3]
     keep = []
     if refstart - maxlen < 0:
         r_st = 0
     else:
         r_st = refstart - maxlen
-    ref = refseq.seq(contig, r_st, refstart + offset)
-    slides = find_all_splice_AC(ref, offset=offset)
-    for slide in slides:  # look through possible splice sites
-        query = mp.revcomp(queryseq[queryend - slide :])
-        align = edlib.align(query, ref, mode="HW", k=0, task="path", additionalEqualities=degenNuc)
-        align = filter4_splice_CT(ref, align)
-        if len(align["locations"]) < 1:
-            continue
-        else:
-            keep.append((align, slide))
-    if len(keep) > 0:
-        a, s = keep[0]
-        paf = right_update_paf_minus(paf, a, s, refstart - maxlen)
+    try:
+        ref = refseq.seq(contig, r_st, refstart + offset)
+        slides = find_all_splice_AC(ref, offset=offset)
+        for slide in slides:  # look through possible splice sites
+            query = mp.revcomp(queryseq[queryend - slide :])
+            try:
+                align = edlib.align(
+                    query,
+                    ref,
+                    mode="HW",
+                    k=0,
+                    task="path",
+                    additionalEqualities=degenNuc,
+                )
+                align = filter4_splice_CT(ref, align)
+                if len(align["locations"]) < 1:
+                    continue
+                else:
+                    keep.append((align, slide))
+            except Exception as e:
+                # Log the error and continue
+                sys.stderr.write(f"Error in edlib alignment: {e}\n")
+                continue
+        if len(keep) > 0:
+            a, s = keep[0]
+            paf = right_update_paf_minus(paf, a, s, refstart - maxlen)
+    except Exception as e:
+        # Log the error and return the original PAF
+        sys.stderr.write(f"Error in right_minus_best_align: {e}\n")
     return paf
 
 
-def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
+def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500, refine=True):
     """
-    Perform spliced alignment of transcripts to a genome using minimap2 and refine terminal alignments with edlib.
+    Perform spliced alignment of transcripts to a genome using mappy and refine terminal alignments with edlib.
 
     This function aligns transcripts to a genome using minimap2 with splice options, and then refines
     the terminal alignments using edlib to improve the alignment of terminal exons that might be missed
@@ -546,16 +610,16 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
         min_mapq (int, optional): Minimum mapping quality value to keep an alignment. Defaults to 1.
         max_intron (int, optional): Maximum intron length, controls terminal search space. Defaults to 500.
 
+    Yields:
+        list: A list containing PAF formatted data for each alignment as it is processed.
+
     Returns:
-        tuple: A tuple containing:
-            - list: A list of lists, where each inner list contains PAF formatted data for an alignment.
-            - dict: A dictionary with statistics about the alignments, including:
-                - 'n': Total number of alignments.
-                - 'low-mapq': Number of alignments dropped due to low mapping quality.
-                - 'refine-left': Number of alignments where the left side was refined.
-                - 'refine-right': Number of alignments where the right side was refined.
+        dict: A dictionary with statistics about the alignments, including:
+            - 'n': Total number of alignments.
+            - 'low-mapq': Number of alignments dropped due to low mapping quality.
+            - 'refine-left': Number of alignments where the left side was refined.
+            - 'refine-right': Number of alignments where the right side was refined.
     """
-    results = []
     stats = {"n": 0, "low-mapq": 0, "refine-left": 0, "refine-right": 0}
     # run minimap2 splice alignment and refine alignment with edlib
     # load reference into index for search and index access
@@ -607,58 +671,146 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500):
                 nm,
                 cs,
             ]
-            if h.q_st > 0:  # refine the alignment for first exon or left side of query
-                if strand == "+":
+            if refine is True:
+                if h.q_st > 0:  # refine the alignment for first exon or left side of query
+                    if strand == "+":
+                        paf = left_plus_best_align(
+                            paf,
+                            ref_idx,
+                            seq,
+                            offset=6,
+                            maxlen=max_intron,
+                        )
+                    else:  # negative/crick strand
+                        paf = left_minus_best_align(
+                            paf,
+                            ref_idx,
+                            seq,
+                            offset=6,
+                            maxlen=max_intron,
+                        )
+                    if paf[-1] != cs:
+                        stats["refine-left"] += 1
+                if len(seq) > h.q_en:  # refine alignment for last exon or right side of query
+                    if strand == "+":
+                        paf = right_plus_best_align(
+                            paf,
+                            ref_idx,
+                            seq,
+                            offset=6,
+                            maxlen=max_intron,
+                        )
+                    else:
+                        paf = right_minus_best_align(
+                            paf,
+                            ref_idx,
+                            seq,
+                            offset=6,
+                            maxlen=max_intron,
+                        )
+                    if paf[-1] != cs:
+                        stats["refine-right"] += 1
+            yield paf
+    # After processing all alignments, yield the stats dictionary
+    yield stats
+
+
+def splice_aligner_minimap2(reference, query, threads=3, min_mapq=1, max_intron=500, refine=True):
+    """
+    Perform spliced alignment of transcripts to a genome using minimap2 and refine terminal alignments with edlib.
+
+    This function aligns transcripts to a genome using minimap2 with splice options, and then refines
+    the terminal alignments using edlib to improve the alignment of terminal exons that might be missed
+    by minimap2. The function handles both forward and reverse strand alignments, recognizing the
+    appropriate splice junctions for each strand.
+
+    Splice junctions:
+    - Plus strand: GT-AG junctions (ATG GGC | GTX  ------- XAG | GCC TAA)
+    - Reverse strand: CT-AC junctions (TTA GGC | CTX ------- XAC GCC CAT)
+
+    Args:
+        reference (str): Path to the reference genome FASTA file.
+        query (str): Path to the query transcripts FASTA or FASTQ file.
+        threads (int, optional): Number of threads to use with minimap2. Defaults to 3.
+        min_mapq (int, optional): Minimum mapping quality value to keep an alignment. Defaults to 1.
+        max_intron (int, optional): Maximum intron length, controls terminal search space. Defaults to 500.
+
+    Yields:
+        list: A list containing PAF formatted data for each alignment as it is processed.
+
+    Returns:
+        dict: A dictionary with statistics about the alignments, including:
+            - 'n': Total number of alignments.
+            - 'low-mapq': Number of alignments dropped due to low mapping quality.
+            - 'refine-left': Number of alignments where the left side was refined.
+            - 'refine-right': Number of alignments where the right side was refined.
+    """
+    stats = {"n": 0, "low-mapq": 0, "refine-left": 0, "refine-right": 0}
+    # run minimap2 splice alignment and refine alignment with edlib
+    cmd = [
+        "minimap2",
+        "-x",
+        "splice",
+        "--cs=short",
+        "-t",
+        str(threads),
+        reference,
+        query,
+    ]
+    if refine is True:
+        # need access to the sequences, so load into mappy index
+        ref_idx = mp.Aligner(reference)
+        query_idx = mp.Aligner(query)
+    # now run minimap2 and parse line-by-line
+    for line in execute(cmd):
+        stats["n"] += 1
+        line = line.rstrip()
+        extras = line.split("\t")[12:]
+        for x in extras:
+            if x.startswith("NM:"):
+                nm = x
+            elif x.startswith("cs:Z:"):
+                cs = x
+            elif x.startswith("tp:"):
+                tp = x
+            elif x.startswith("ts:"):
+                ts = x
+        # keep simplfied paf format
+        paf = line.split("\t")[:12] + [tp, ts, nm, cs]
+        # convert to int where possible
+        paf = [int(x) if x.isdigit() else x for x in paf]
+        # check for lowqual
+        if paf[11] < min_mapq:
+            stats["low-mapq"] += 1
+            continue
+        if refine is True:
+            if paf[2] > 0:  # refine the alignment for first exon or left side of query
+                if paf[4] == "+":
                     paf = left_plus_best_align(
-                        paf,
-                        ref_idx,
-                        h.ctg,
-                        h.r_st,
-                        seq,
-                        h.q_st,
-                        offset=6,
-                        maxlen=max_intron,
+                        paf, ref_idx, query_idx.seq(paf[0]), offset=6, maxlen=max_intron
                     )
                 else:  # negative/crick strand
                     paf = left_minus_best_align(
-                        paf,
-                        ref_idx,
-                        h.ctg,
-                        h.r_en,
-                        seq,
-                        h.q_st,
-                        offset=6,
-                        maxlen=max_intron,
+                        paf, ref_idx, query_idx.seq(paf[0]), offset=6, maxlen=max_intron
                     )
                 if paf[-1] != cs:
                     stats["refine-left"] += 1
-            if len(seq) > h.q_en:  # refine alignment for last exon or right side of query
-                if strand == "+":
+            if (
+                len(query_idx.seq(paf[0])) > paf[3]
+            ):  # refine alignment for last exon or right side of query
+                if paf[4] == "+":
                     paf = right_plus_best_align(
-                        paf,
-                        ref_idx,
-                        h.ctg,
-                        h.r_en,
-                        seq,
-                        h.q_en,
-                        offset=6,
-                        maxlen=max_intron,
+                        paf, ref_idx, query_idx.seq(paf[0]), offset=6, maxlen=max_intron
                     )
                 else:
                     paf = right_minus_best_align(
-                        paf,
-                        ref_idx,
-                        h.ctg,
-                        h.r_st,
-                        seq,
-                        h.q_en,
-                        offset=6,
-                        maxlen=max_intron,
+                        paf, ref_idx, query_idx.seq(paf[0]), offset=6, maxlen=max_intron
                     )
                 if paf[-1] != cs:
                     stats["refine-right"] += 1
-            results.append(paf)
-    return results, stats
+        yield paf
+    # After processing all alignments, yield the stats dictionary
+    yield stats
 
 
 def cs2coords(
@@ -765,65 +917,6 @@ def cs2coords(
     return exonList, queryList, mismatches, gaps, ProperSplice
 
 
-def paf2gff3(paf, output=False, minpident=0):
-    """
-    Convert PAF format alignments to GFF3 format.
-
-    This function takes a list of PAF format alignments and converts them to GFF3 format,
-    writing the output to a file or stdout. It calculates the percent identity for each
-    alignment and filters out alignments below a minimum percent identity threshold.
-
-    Args:
-        paf (list): A list of lists, where each inner list contains PAF formatted data for an alignment.
-        output (str, optional): Path to the output file. If False, writes to stdout. Defaults to False.
-        minpident (float, optional): Minimum percent identity threshold. Alignments below this threshold
-            will be filtered out. Defaults to 0.
-    """
-    if output:
-        outfile = zopen(output, mode="w")
-    else:
-        outfile = sys.stdout
-    outfile.write("##gff-version 3\n")
-    # paf is a list of lists in paf format
-    # paf = [name, len(seq), h.q_st, h.q_en, strand, h.ctg, h.ctg_len, h.r_st, h.r_en, h.mlen, h.blen, h.mapq, tp, ts, nm, cs]
-    count = 1
-    sorted_paf = natsorted(paf, key=lambda x: (x[5], x[7]))
-    for p in sorted_paf:
-        exons, queries, mismatches, gaps, _ = cs2coords(p[7], p[2], p[9], p[4], p[-1])
-        matches = p[9] - mismatches - gaps
-        pident = 100 * (matches / p[9])
-        if pident < minpident:
-            continue
-        for i, exon in enumerate(exons):
-            start = exon[0]
-            end = exon[1]
-            if p[4] == "+":
-                qstart = queries[i][0]
-                qend = queries[i][1]
-            else:
-                qstart = p[1] - queries[i][1] + 1
-                qend = p[1] - queries[i][0] + 1
-            if qstart == 0:
-                qstart = 1
-            outfile.write(
-                "{:}\t{:}\t{:}\t{:}\t{:}\t{:.2f}\t{:}\t{:}\tID=gapmm2_{:};Target={:} {:} {:}\n".format(
-                    p[5],
-                    "gapmm2",
-                    "cDNA_match",
-                    start,
-                    end,
-                    pident,
-                    p[4],
-                    ".",
-                    count,
-                    p[0],
-                    qstart,
-                    qend,
-                )
-            )
-        count += 1
-
-
 def aligner(
     reference,
     query,
@@ -832,7 +925,7 @@ def aligner(
     out_fmt="paf",
     min_mapq=1,
     max_intron=500,
-    debug=False,
+    refine=True,
 ):
     """
     Write spliced alignment results to a file or stdout.
@@ -849,30 +942,89 @@ def aligner(
         out_fmt (str, optional): Output format, either "paf" or "gff3". Defaults to "paf".
         min_mapq (int, optional): Minimum mapping quality value to keep an alignment. Defaults to 1.
         max_intron (int, optional): Maximum intron length, controls terminal search space. Defaults to 500.
-        debug (bool, optional): Whether to write debug information to stderr. Defaults to False.
     """
     # wrapper for spliced alignment for script to write to file
     if output:
         outfile = zopen(output, mode="w")
     else:
         outfile = sys.stdout
-    results, stats = splice_aligner(
-        reference, query, threads=threads, min_mapq=min_mapq, max_intron=max_intron
+
+    # Write GFF3 header if needed
+    if out_fmt == "gff3":
+        outfile.write("##gff-version 3\n")
+
+    # Counter for GFF3 IDs
+    count = 1
+    stats = None
+
+    if which2("minimap2"):
+        spl_aln = splice_aligner_minimap2
+    else:
+        spl_aln = splice_aligner
+
+    # Get the generator for alignments
+    alignment_generator = spl_aln(
+        reference,
+        query,
+        threads=threads,
+        min_mapq=min_mapq,
+        max_intron=max_intron,
+        refine=refine,
     )
-    if debug:
-        sys.stderr.write(
-            "Generated {} alignments: {} required 5' refinement, {} required 3' refinement, {} dropped low score\n".format(
-                stats["n"],
-                stats["refine-left"],
-                stats["refine-right"],
-                stats["low-mapq"],
-            )
-        )
-    if out_fmt == "paf":
-        for r in natsorted(results, key=lambda x: (x[5], x[7])):
-            outfile.write("{}\n".format("\t".join([str(x) for x in r])))
-    elif out_fmt == "gff3":
-        paf2gff3(results, output=output)
+
+    # Process each alignment as it's generated
+    for result in alignment_generator:
+        # Check if this is the stats dictionary (last yield)
+        if isinstance(result, dict):
+            stats = result
+            continue
+
+        # This is a PAF alignment
+        paf = result
+
+        if out_fmt == "paf":
+            # Write PAF format directly
+            outfile.write("{}\n".format("\t".join([str(x) for x in paf])))
+        elif out_fmt == "gff3":
+            # Convert to GFF3 format and write
+            exons, queries, mismatches, gaps, _ = cs2coords(paf[7], paf[2], paf[9], paf[4], paf[-1])
+            matches = paf[9] - mismatches - gaps
+            pident = 100 * (matches / paf[9])
+
+            for i, exon in enumerate(exons):
+                start = exon[0]
+                end = exon[1]
+                if paf[4] == "+":
+                    qstart = queries[i][0]
+                    qend = queries[i][1]
+                else:
+                    qstart = paf[1] - queries[i][1] + 1
+                    qend = paf[1] - queries[i][0] + 1
+                if qstart == 0:
+                    qstart = 1
+                outfile.write(
+                    "{:}\t{:}\t{:}\t{:}\t{:}\t{:.2f}\t{:}\t{:}\tID=gapmm2_{:};Target={:} {:} {:}\n".format(
+                        paf[5],
+                        "gapmm2",
+                        "cDNA_match",
+                        start,
+                        end,
+                        pident,
+                        paf[4],
+                        ".",
+                        count,
+                        paf[0],
+                        qstart,
+                        qend,
+                    )
+                )
+            count += 1
+
+    # Close the output file if it's not stdout
+    if output:
+        outfile.close()
+
+    return stats
 
 
 def align(args):
@@ -887,7 +1039,7 @@ def align(args):
         args: An argparse.Namespace object containing the command-line arguments.
     """
     check_inputs([args.reference, args.query])
-    aligner(
+    stats = aligner(
         args.reference,
         args.query,
         output=args.out,
@@ -895,5 +1047,14 @@ def align(args):
         min_mapq=args.min_mapq,
         max_intron=args.max_intron,
         out_fmt=args.out_fmt,
-        debug=args.debug,
+        refine=args.refine,
     )
+    if args.debug and stats:
+        sys.stderr.write(
+            "Generated {} alignments: {} required 5' refinement, {} required 3' refinement, {} dropped low score\n".format(
+                stats["n"],
+                stats["refine-left"],
+                stats["refine-right"],
+                stats["low-mapq"],
+            )
+        )

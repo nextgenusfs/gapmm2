@@ -84,19 +84,15 @@ Help:
 
 It can also be run as a python module. The module provides several functions for working with spliced alignments:
 
-#### `splice_aligner` function
+#### `aligner` function
 
-The main function for aligning transcripts to a genome. It returns a list of lists containing PAF formatted data for each alignment and a dictionary of simple stats.
+The main function for aligning transcripts to a genome. It can write an output file in either PAF or GFF3. It returns a dictionary with alignment statistics.
 
 ```python
->>> from gapmm2.align import splice_aligner
->>> results, stats = splice_aligner('genome.fa', 'transcripts.fa')
+>>> from gapmm2.align import aligner
+>>> stats = aligner('genome.fa', 'transcripts.fa', out_fmt="gff3", output="output.gff3")
 >>> stats
 {'n': 6926, 'low-mapq': 0, 'refine-left': 409, 'refine-right': 63}
->>> len(results)
-6926
->>> results[0]
-['OPO1_000001-T1', 2184, 0, 2184, '+', 'scaffold_1', 1803704, 887, 3127, 2184, 2184, 60, 'tp:A:P', 'ts:A:+', 'NM:i:0', 'cs:Z::958~gt56ag:1226']
 ```
 
 #### `cs2coords` function
@@ -108,17 +104,6 @@ This function parses the CIGAR string (cs) from minimap2 and converts it to geno
 >>> cs2coords(408903, 0, 543, '-', ':129~ct57ac:166~ct64ac:235~ct54ac:13')
 ([(409609, 409621), (409320, 409554), (409090, 409255), (408904, 409032)], [(0, 13), (13, 248), (248, 414), (414, 543)], 0, 0, True)
 ```
-
-#### `paf2gff3` function
-
-This function converts PAF format alignments to GFF3 format.
-
-```python
->>> from gapmm2.align import splice_aligner, paf2gff3
->>> results, stats = splice_aligner('genome.fa', 'transcripts.fa')
->>> paf2gff3(results, output='output.gff3')
-```
-
 
 
 ### Installation
@@ -149,7 +134,7 @@ Gapmm2 requires the following Python packages:
 - edlib (for sequence alignment)
 - natsort (for natural sorting)
 
-These dependencies will be automatically installed when you install gapmm2 using pip or conda.
+These dependencies will be automatically installed when you install gapmm2 using pip or conda. Note that I've recently seen some seqmentation faults from mappy, so as of v25.4.13 it will run `minimap2` directly instead of mappy if `minimap2 ` is installed.
 
 ### Development
 
