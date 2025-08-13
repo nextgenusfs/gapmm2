@@ -615,12 +615,25 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500, refi
 
     Returns:
         dict: A dictionary with statistics about the alignments, including:
-            - 'n': Total number of alignments.
+            - 'n': Total number of alignments processed.
             - 'low-mapq': Number of alignments dropped due to low mapping quality.
             - 'refine-left': Number of alignments where the left side was refined.
             - 'refine-right': Number of alignments where the right side was refined.
+            - 'unaligned': Dictionary of unaligned reads (should be empty for mappy-based alignment).
     """
-    stats = {"n": 0, "low-mapq": 0, "refine-left": 0, "refine-right": 0}
+    stats = {
+        "n": 0,
+        "low-mapq": 0,
+        "refine-left": 0,
+        "refine-right": 0,
+        "unaligned": {
+            "missing-cs": 0,
+            "missing-tp": 0,
+            "missing-ts": 0,
+            "missing-nm": 0,
+            "invalid-paf": 0,
+        },
+    }
     # run minimap2 splice alignment and refine alignment with edlib
     # load reference into index for search and index access
     ref_idx = mp.Aligner(reference, preset="splice", n_threads=threads)
@@ -633,6 +646,21 @@ def splice_aligner(reference, query, threads=3, min_mapq=1, max_intron=500, refi
             if h.mapq < min_mapq:
                 stats["low-mapq"] += 1
                 continue
+
+            # Validate that required attributes are available
+            if not hasattr(h, "cs") or h.cs is None:
+                stats["unaligned"]["missing-cs"] += 1
+                continue
+            if not hasattr(h, "NM"):
+                stats["unaligned"]["missing-nm"] += 1
+                continue
+            if not hasattr(h, "is_primary"):
+                stats["unaligned"]["missing-tp"] += 1
+                continue
+            if not hasattr(h, "trans_strand"):
+                stats["unaligned"]["missing-ts"] += 1
+                continue
+
             # construct data for paf format
             if h.strand > 0:
                 strand = "+"
@@ -740,12 +768,30 @@ def splice_aligner_minimap2(reference, query, threads=3, min_mapq=1, max_intron=
 
     Returns:
         dict: A dictionary with statistics about the alignments, including:
-            - 'n': Total number of alignments.
+            - 'n': Total number of alignments processed.
             - 'low-mapq': Number of alignments dropped due to low mapping quality.
             - 'refine-left': Number of alignments where the left side was refined.
             - 'refine-right': Number of alignments where the right side was refined.
+            - 'unaligned': Dictionary of unaligned reads with counts for:
+                - 'missing-cs': Alignments missing cs tag (skipped).
+                - 'missing-tp': Alignments missing tp tag (skipped).
+                - 'missing-ts': Alignments missing ts tag (skipped).
+                - 'missing-nm': Alignments missing nm tag (skipped).
+                - 'invalid-paf': Invalid PAF lines (skipped).
     """
-    stats = {"n": 0, "low-mapq": 0, "refine-left": 0, "refine-right": 0}
+    stats = {
+        "n": 0,
+        "low-mapq": 0,
+        "refine-left": 0,
+        "refine-right": 0,
+        "unaligned": {
+            "missing-cs": 0,
+            "missing-tp": 0,
+            "missing-ts": 0,
+            "missing-nm": 0,
+            "invalid-paf": 0,
+        },
+    }
     # run minimap2 splice alignment and refine alignment with edlib
     cmd = [
         "minimap2",
@@ -763,9 +809,28 @@ def splice_aligner_minimap2(reference, query, threads=3, min_mapq=1, max_intron=
         query_idx = mp.Aligner(query)
     # now run minimap2 and parse line-by-line
     for line in execute(cmd):
-        stats["n"] += 1
         line = line.rstrip()
-        extras = line.split("\t")[12:]
+
+        # Skip empty lines
+        if not line:
+            continue
+
+        stats["n"] += 1
+
+        # Validate PAF format (should have at least 12 columns)
+        fields = line.split("\t")
+        if len(fields) < 12:
+            # Invalid PAF line, skip
+            stats["unaligned"]["invalid-paf"] += 1
+            continue
+
+        extras = fields[12:]
+
+        # Parse optional tags
+        tp = None
+        ts = None
+        nm = None
+        cs = None
         for x in extras:
             if x.startswith("NM:"):
                 nm = x
@@ -775,6 +840,25 @@ def splice_aligner_minimap2(reference, query, threads=3, min_mapq=1, max_intron=
                 tp = x
             elif x.startswith("ts:"):
                 ts = x
+
+        # Check if required tags are present
+        if cs is None:
+            # cs tag is required for --cs=short option, skip this alignment
+            # This might indicate a problem with minimap2 version or alignment failure
+            stats["unaligned"]["missing-cs"] += 1
+            continue
+
+        # really shouldn't use these reads at all
+        if tp is None:
+            stats["unaligned"]["missing-tp"] += 1
+            continue
+        if ts is None:
+            stats["unaligned"]["missing-ts"] += 1
+            continue
+        if nm is None:
+            stats["unaligned"]["missing-nm"] += 1
+            continue
+
         # keep simplfied paf format
         paf = line.split("\t")[:12] + [tp, ts, nm, cs]
         # convert to int where possible

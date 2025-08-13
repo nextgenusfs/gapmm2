@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gapmm2"
-version = "25.4.13"
+version = "25.8.12"
 description = "gapmm2: gapped alignment using minimap2"
 readme = "README.md"
 authors = [
