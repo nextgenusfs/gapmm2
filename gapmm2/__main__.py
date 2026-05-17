@@ -65,6 +65,7 @@ def parse_args(args):
         "-m",
         "--min-mapq",
         dest="min_mapq",
+        type=int,
         default=1,
         help="minimum map quality value",
         metavar="",
